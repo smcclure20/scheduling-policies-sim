@@ -4,7 +4,7 @@ import os
 import json
 
 RESULTS_DIR_NAME = "results/"
-RESULTS_SUBDIR_NAME = RESULTS_DIR_NAME + "{}/"
+RESULTS_SUBDIR_NAME = RESULTS_DIR_NAME + "sim_{}/"
 THREAD_RUN_FORMAT = "{}_t{}"
 CPU_FILE_NAME = "cpu_usage.csv"
 TASK_FILE_NAME = "task_times.csv"
@@ -118,7 +118,6 @@ def analyze_sim_run(run_name, output_file, print_results=False, time_dropped=0):
     percentiles = np.percentile(task_latencies, [95, 99.9, 50, 99])
 
     ## 99.9% Tail Flag Stats
-    # TODO: !!
     tasks_stolen_999 = 0
     tasks_999 = 0
     tasks_flag_stolen_999 = 0
@@ -169,12 +168,6 @@ def analyze_sim_run(run_name, output_file, print_results=False, time_dropped=0):
 
     avg_time_from_alloc_to_task = stats["Total Alloc to Task Time"] / stats["Number Allocations"] if stats["Number Allocations"] > 0 else 0
 
-    # TODO Will be relevant when fully parameterized
-    #duration = meta_data["sim_duration"] if meta_data["sim_duration"] is not None else meta_data["end_time"]
-    #num_tasks = meta_data["num_tasks"] if meta_data["num_tasks"] is not None else meta_data["scheduled_tasks"]
-
-
-
     data_string = "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}".format(
         run_name[4:], meta_data["num_threads"], meta_data["sim_duration"], meta_data["AVERAGE_SERVICE_TIME"],
         meta_data["avg_system_load"], avg_load * 100, avg_task_load * 100, avg_ws_load * 100, percentiles[0],
@@ -187,21 +180,12 @@ def analyze_sim_run(run_name, output_file, print_results=False, time_dropped=0):
         "\"{}\"".format(meta_data["description"]))
     output_file.write(data_string + "\n")
 
-    # if print_results:
-    #     names = CSV_HEADER.split(",")
-    #     values = data_string.split(",")
-    #     print(run_id[4:0])
-    #     for i in range(len(names)):
-    #         print("{}: {}".format(names[i], values[i]))
-    #     print()
-
 
 def main():
     # Arguments:
     # First arg is either a name of a file with a list of runs or the name of one run (or nothing to use entire results dir)
     # Second arg is output file
-    # Third arg is whether it should print intermediate results or not
-    # Fourth arg is how many of the first tasks to drop for task latency metrics
+    # Third arg is how many of the first tasks to drop for task latency metrics
 
     if len(sys.argv) != 4:
         print("Invalid number of arguments.")
@@ -212,29 +196,26 @@ def main():
     output_file.write(CSV_HEADER + "\n")
 
     sim_list = []
-    if len(sys.argv) > 2: #why this?
-        name = sys.argv[1].strip()
+    name = sys.argv[1].strip()
 
-        # File with list of sim names
-        if os.path.isfile("./" + name):
-            sim_list_file = open(name)
-            sim_list = sim_list_file.readlines()
-            sim_list_file.close()
+    # File with list of sim names
+    if os.path.isfile("./" + name):
+        sim_list_file = open(name)
+        sim_list = sim_list_file.readlines()
+        sim_list_file.close()
 
-        # Name of one run
-        elif os.path.isdir(RESULTS_SUBDIR_NAME.format(name)):
-            sim_list.append(name)
+    # Name of one run
+    elif os.path.isdir(RESULTS_SUBDIR_NAME.format(name)):
+        sim_list.append(name)
 
-        # Name of multiple runs (different threads)
-        elif os.path.isdir(RESULTS_SUBDIR_NAME.format(THREAD_RUN_FORMAT.format(name, 0))):
-            i = 0
-            while os.path.isdir(RESULTS_SUBDIR_NAME.format(THREAD_RUN_FORMAT.format(name, i))):
-                sim_list.append(THREAD_RUN_FORMAT.format(name, i))
-                i += 1
-        else:
-            print("File or directory not found")
+    # Name of multiple runs (different threads)
+    elif os.path.isdir(RESULTS_SUBDIR_NAME.format(THREAD_RUN_FORMAT.format(name, 0))):
+        i = 0
+        while os.path.isdir(RESULTS_SUBDIR_NAME.format(THREAD_RUN_FORMAT.format(name, i))):
+            sim_list.append(THREAD_RUN_FORMAT.format(name, i))
+            i += 1
     else:
-        sim_list = os.listdir(RESULTS_DIR_NAME)
+        print("File or directory not found")
 
     for sim_name in sim_list:
         analyze_sim_run(sim_name.strip(), output_file, time_dropped=int(sys.argv[-1])/100)

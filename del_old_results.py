@@ -4,7 +4,6 @@ import os
 
 RESULTS_DIR_NAME = "./results/"
 RESULTS_SUBDIR_NAME = RESULTS_DIR_NAME + "{}/"
-THREAD_RUN_FORMAT = "sim_{}_t{}"
 META_LOG_PATH = RESULTS_DIR_NAME + "meta_log"
 CONFIG_RECORD_DIR = "./config_records/"
 CONFIG_RECORD_NAME = "{}.json"

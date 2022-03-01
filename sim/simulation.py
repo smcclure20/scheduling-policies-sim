@@ -17,6 +17,7 @@ from sim_config import SimConfig
 
 SINGLE_THREAD_SIM_NAME_FORMAT = "{}_{}"
 MULTI_THREAD_SIM_NAME_FORMAT = "{}_{}_t{}"
+RESULTS_DIR = "../results/"
 META_LOG_FILE = "../results/meta_log"
 CONFIG_LOG_DIR = "../config_records/"
 
@@ -56,7 +57,8 @@ class Simulation:
             # If fast forwarding, find the time jump
             if self.config.fast_forward_enabled:
                 next_arrival, next_alloc = self.find_next_arrival_and_alloc(task_number, allocation_number)
-                time_jump, reschedule_required = self.find_time_jump(next_arrival, next_alloc, immediate_reschedule=reschedule_required)
+                time_jump, reschedule_required = self.find_time_jump(next_arrival, next_alloc,
+                                                                     immediate_reschedule=reschedule_required)
 
             logging.debug("\n(jump: {}, rr: {})".format(time_jump, reschedule_required))
 
@@ -72,7 +74,7 @@ class Simulation:
                     chosen_queue = self.choose_enqueue(self.config.ENQUEUE_CHOICES)
                     working_cores = self.state.currently_working_cores()
                     if len(working_cores) == 0:
-                        self.state.tasks[task_number].source_core = self.state.queues[chosen_queue].get_core() #TODO: this is brittle
+                        self.state.tasks[task_number].source_core = self.state.queues[chosen_queue].get_core()
                     else:
                         self.state.tasks[task_number].source_core = random.choice(self.state.currently_working_cores())
                     source_core = self.state.tasks[task_number].source_core
@@ -86,7 +88,8 @@ class Simulation:
                     chosen_queue = random.choice(self.state.available_queues)
                     self.state.queues[chosen_queue].enqueue(self.state.tasks[task_number], set_original=True)
 
-                if self.config.fred_reallocation and self.state.threads[self.state.queues[chosen_queue].get_core()].is_busy():
+                if self.config.fred_reallocation and \
+                        self.state.threads[self.state.queues[chosen_queue].get_core()].is_busy():
                     self.state.threads[self.state.queues[chosen_queue].get_core()].fred_preempt = True
 
                 logging.debug("[ARRIVAL]: {} onto queue {}".format(self.state.tasks[task_number], chosen_queue))
@@ -426,7 +429,7 @@ class Simulation:
     def save_stats(self):
         """Save simulation date to file."""
         # Make files and directories
-        new_dir_name = "../results/sim_{}/".format(self.config.name)
+        new_dir_name = RESULTS_DIR + "sim_{}/".format(self.config.name)
         os.makedirs(os.path.dirname(new_dir_name))
         cpu_file = open("{}cpu_usage.csv".format(new_dir_name, self.config.name), "w")
         task_file = open("{}task_times.csv".format(new_dir_name, self.config.name), "w")
@@ -476,23 +479,19 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    state = None
-    config = None
 
-    # Logging
-    log_level = logging.WARN
     run_name = SINGLE_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename,
                                                     datetime.datetime.now().strftime("%y-%m-%d_%H:%M:%S"))
-
-    # logging.basicConfig(filename="./logs/sim_{}.log".format(time_string), filemode='w', level=log_level)
-    logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
-
 
     if os.path.isfile(sys.argv[1]):
         cfg_json = open(sys.argv[1], "r")
         cfg = json.load(cfg_json, object_hook=SimConfig.decode_object)
         cfg.name = run_name
         cfg_json.close()
+
+        if "-d" in sys.argv:
+            logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
+            sys.argv.remove("-d")
 
         if len(sys.argv) > 2:
             meta_log = open(META_LOG_FILE, "a")
@@ -501,6 +500,7 @@ if __name__ == "__main__":
             cfg.description = sys.argv[2]
 
     else:
+        print("Config file not found.")
         exit(1)
 
     sim = Simulation(cfg)

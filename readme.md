@@ -1,15 +1,23 @@
 # Microsecond-Scale Task Simulator
 
-## To Run
+## Naming and Organization
+Simulation code resides in`/sim/`. Raw results are stored in the `results` directory in a directory named after the simulation name.
 
-####To run a single simulation:
+Simulations are named with the following convention: `<hostname>_<date_time>` or `<hostname>_<date_time>_t<thread_number>` for parallelized runs. `sim_` is prepended to the name for results subdirectories.
+
+## To Run
+You should be in the `/sim/` directory
+
+#### To run a single simulation:
 `python3 simulation.py <config_file> <description (optional)>`
 
-####To run multiple simulations in parallel:
+Flags: `-d` for debug output to standard out.
+
+#### To run multiple simulations in parallel:
 
 `python3 run_sim.py <config_file_path> <options: -varycores, description>`
 
-#####Optional arguments:
+##### Optional arguments:
 
 `-varycores`: Vary the number of cores in each simulation rather than varying the load.
 
@@ -19,7 +27,9 @@ Example: `python3 run_sim.py config.json -varycores "work stealing static alloca
 
 ## Configuration
 
-####Configuration Parameter Dictionary
+#### Configuration Parameter Dictionary
+
+##### System Parameters
 * `avg_system_load`: (float) Offered load
 * `num_queues`: (int) Number of queues
 * `num_threads`: (int) Number of threads
@@ -56,26 +66,28 @@ Example: `python3 run_sim.py config.json -varycores "work stealing static alloca
 * `utilization_range_enabled`: (bool) Enables the reallocation policy in which a range of CPU utilization is maintained. Only one reallocation policy may be enabled.
 * `bimodal_service_time`: (bool) If enabled, tasks are generated according to a bimodal distribution rather than an exponential distribution.
 * `join_bounded_shortest_queue`: (bool) Enables the load balancing policy in which tasks join a central queue and individual queues pull to maintain a certain length.
-* `record_queue_lens`: (bool) If enabled, record queue lengths at each reallocation decision [TODO: CHECK]
+* `record_queue_lens`: (bool) If enabled, record queue lengths at each reallocation decision.
+
+##### Constants
 * `AVERAGE_SERVICE_TIME`: (int) Average service time of tasks in ns.
 * `WORK_STEAL_CHECK_TIME`: (int) Time to check if a core can be stolen from in ns.
 * `WORK_STEAL_TIME`: (int) Time to steal from another core in ns.
 * `MINIMUM_WORK_SEARCH_TIME`: (int) Minimum time that a core must work steal before parking in ns.
 * `LOCAL_QUEUE_CHECK_TIME`: (int) Time to check local queue for tasks in ns.
 * `ALLOCATION_TIME`: (int) Time required to allocate a core in ns.
-* `BUFFER_CORE_COUNT_MIN`: (int) Minimum number of buffer cores allowed.
-* `BUFFER_CORE_COUNT_MAX`: (int) Maximum number of buffer cores allowed. [TODO: IF BOTH COUNT AND PCT....]
-* `BUFFER_CORE_PCT_MIN`: (float) Minimum percent of cores that should be buffer cores. [TODO: check float v int]
-* `BUFFER_CORE_PCT_MAX`: (float) Maximum percent of cores that should be buffer cores.
+* `BUFFER_CORE_COUNT_MIN`: (int) Minimum number of buffer cores allowed. If both count and percent are defined, takes the higher value.
+* `BUFFER_CORE_COUNT_MAX`: (int) Maximum number of buffer cores allowed. If both count and percent are defined, takes the count value.
+* `BUFFER_CORE_PCT_MIN`: (int) Minimum percent of cores that should be buffer cores. If both count and percent are defined, takes the higher value.
+* `BUFFER_CORE_PCT_MAX`: (int) Maximum percent of cores that should be buffer cores. If both count and percent are defined, takes the count value.
 * `REALLOCATION_THRESHOLD_MIN`: (int) Minimum allowed queueing delay for delay range in ns.
 * `REALLOCATION_THRESHOLD_MAX`: (int) Maximum allowed queueing delay for delay range in ns.
 * `DELAY_THRESHOLD`: (int) Queueing delay threshold to trigger flagging in ns.
 * `FLAG_STEAL_DELAY`: (int) Overhead for flag stealing in ns.
 * `ENQUEUE_CHOICES`: (int) Number of enqueue choices.
 * `ENQUEUE_PENALTY`: (int) Overhead for determining enqueue location in ns.
-* `ALLOCATION_PAUSE`: (int) Time before another allocation decision can be made if a core is added in ns[TODO: CHECK].
+* `ALLOCATION_PAUSE`: (int) Time before another allocation decision can be made if a core is added in ns.
 * `ALLOCATION_THRESHOLD`: (int) Threshold for queueing delay which causes a core to be added in default core allocation policy in ns.
-* `REQUEUE_PENALTY`: (int) Overhead for moving a task between queues in ns. [TODO: MORE DETAIL]
+* `REQUEUE_PENALTY`: (int) Overhead for moving a task between queues in ns. Applies to per-task movement of tasks.
 * `UTILIZATION_MIN`: (int) Minimum allowable CPU utilization in utilization range.
 * `UTILIZATION_MAX`: (int) Maximum allowable CPU utilization in utilization range.
 * `FLAG_OPTIONS`: (int) Number of options when flagging.
@@ -84,8 +96,23 @@ Example: `python3 run_sim.py config.json -varycores "work stealing static alloca
 
 
 ## To Analyze Results
+`python3 analysis.py <simulations> <output_file> <ignored_time>`
+
+Arguments:
+* simulations: Specifies simulations to analyze. Can be (1) a file with a list of simulation names, (2) the name of a single run, or (3)
+ the name of a run with multiple parallel threads.
+* output_file: Output file for results
+* ignored_time: Percentage of simulation time (as an int) to drop from the beginning of the data.
 
 ## To Delete Old Results
+Removes output files associated with the simulation and removes the line in the meta log.
+`python3 del_old_results.py <run_name>`
+
+Flags:
+* `-delconf`: Delete the saved version of the configuration file as well.
+
+Deletes configuration record for the given simulation and deletes the associated line in the meta log.
+`python3 del_config_record.py <run_name>`
 
 
 

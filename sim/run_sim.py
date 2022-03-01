@@ -1,12 +1,11 @@
-import threading
 import simulation as sim
+
 import sys
 import os
 from datetime import datetime
 import multiprocessing
 import json
 
-# TODO: Fix multithreaded printing progress bars
 
 class SimProcess(multiprocessing.Process):
     def __init__(self, thread_id, name, configuration):
@@ -75,29 +74,6 @@ if __name__ == "__main__":
     else:
         for i, load in enumerate(loads):
             name = sim.MULTI_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time, i)
-            # if sys.argv[1] == "single_q": # TODO: we can probably dump this now that we have config files
-            #     if len(sys.argv) > 4:
-            #         name_parts = sys.argv[4].split("_", 1)
-            #         playback_file = sim.MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
-            #     else:
-            #         playback_file = None
-            #     cfg = sim.SimConfig.get_single_queue_config(name, int(sys.argv[2]), load, int(sys.argv[3]),
-            #                                                 progress=(i == 0),
-            #                                                 playback_file=playback_file)
-            #     cfg_json = json.dumps(cfg)
-            #
-            # elif sys.argv[1] == "multi_q":
-            #     arg_map = sim.SimConfig.parse_args(sys.argv[4:])
-            #     cfg = sim.SimConfig.get_multiple_queue_config(name, int(sys.argv[2]), range(int(sys.argv[2])), load,
-            #                                                   int(sys.argv[3]), arg_map["parking"],
-            #                                                   record_allocs=arg_map["record_allocs"],
-            #                                                   fast_forward=arg_map["ff"],
-            #                                                   record_steals=arg_map["record_steals"],
-            #                                                   buffer_cores=arg_map["buffer"],
-            #                                                   ws_self_check=arg_map["ws_self_check"],
-            #                                                   allocation_delay=arg_map["alloc_delay"],
-            #                                                   two_choices=arg_map["two_choices"],
-            #                                                   progress=(i == 0))
 
             if os.path.isfile(sys.argv[1]):
                 cfg = json.loads(cfg_json, object_hook=sim.SimConfig.decode_object)
