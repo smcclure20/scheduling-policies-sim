@@ -1,22 +1,26 @@
-import simulation as sim
+from simulation import Simulation, RESULTS_DIR, META_LOG_FILE, CONFIG_LOG_DIR, SINGLE_THREAD_SIM_NAME_FORMAT, \
+    MULTI_THREAD_SIM_NAME_FORMAT
+from sim_config import SimConfig
 
 import sys
 import os
 from datetime import datetime
 import multiprocessing
 import json
+import pathlib
 
 
 class SimProcess(multiprocessing.Process):
-    def __init__(self, thread_id, name, configuration):
+    def __init__(self, thread_id, name, configuration, sim_dir_path):
         multiprocessing.Process.__init__(self)
         self.thread_id = thread_id
         self.name = name
         self.config = configuration
+        self.sim_path = sim_dir_path
 
     def run(self):
         print("Starting " + self.name)
-        simulation = sim.Simulation(self.config)
+        simulation = Simulation(self.config, self.sim_path)
         simulation.run()
         simulation.save_stats()
         print("Exiting " + self.name)
@@ -30,6 +34,8 @@ if __name__ == "__main__":
     cores = None
     description = ""
 
+    path_to_sim = os.path.relpath(pathlib.Path(__file__).resolve().parents[1], start=os.curdir)
+
     if os.path.isfile(sys.argv[1]):
         cfg_json_fp = open(sys.argv[1], "r")
         cfg_json = cfg_json_fp.read()
@@ -40,8 +46,10 @@ if __name__ == "__main__":
         sys.argv.remove("-varycores")
 
     if len(sys.argv) > 2:
-        name = sim.SINGLE_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time)
-        meta_log = open(sim.META_LOG_FILE, "a")
+        name = SINGLE_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time)
+        if not os.path.isdir(RESULTS_DIR.format(path_to_sim)):
+            os.makedirs(RESULTS_DIR.format(path_to_sim))
+        meta_log = open(META_LOG_FILE.format(path_to_sim), "a")
         meta_log.write("{}: {}\n".format(name, sys.argv[2]))
         meta_log.close()
         description = sys.argv[2]
@@ -49,13 +57,13 @@ if __name__ == "__main__":
 
     if cores is not None:
         for i, core_num in enumerate(cores):
-            name = sim.MULTI_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time, i)
+            name = MULTI_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time, i)
 
             if os.path.isfile(sys.argv[1]):
-                cfg = json.loads(cfg_json, object_hook=sim.SimConfig.decode_object)
+                cfg = json.loads(cfg_json, object_hook=SimConfig.decode_object)
                 if cfg.reallocation_replay:
                     name_parts = cfg.reallocation_record.split("_", 1)
-                    cfg.reallocation_record = sim.MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
+                    cfg.reallocation_record = MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
                 cfg.num_threads = core_num
                 if cfg.num_queues != 1:
                     cfg.num_queues = core_num
@@ -69,17 +77,17 @@ if __name__ == "__main__":
                 print("Missing or invalid argument")
                 exit(1)
 
-            threads.append(SimProcess(i, name, cfg))
+            threads.append(SimProcess(i, name, cfg, path_to_sim))
 
     else:
         for i, load in enumerate(loads):
-            name = sim.MULTI_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time, i)
+            name = MULTI_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time, i)
 
             if os.path.isfile(sys.argv[1]):
-                cfg = json.loads(cfg_json, object_hook=sim.SimConfig.decode_object)
+                cfg = json.loads(cfg_json, object_hook=SimConfig.decode_object)
                 if cfg.reallocation_replay:
                     name_parts = cfg.reallocation_record.split("_", 1)
-                    cfg.reallocation_record = sim.MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
+                    cfg.reallocation_record = MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
                 cfg.avg_system_load = load / 100
                 cfg.name = name
                 cfg.progress_bar = (i == 0)
@@ -89,13 +97,14 @@ if __name__ == "__main__":
                 print("Missing or invalid argument")
                 exit(1)
 
-            threads.append(SimProcess(i, name, cfg))
+            threads.append(SimProcess(i, name, cfg, path_to_sim))
 
     threads.reverse()
     for thread in threads:
         thread.start()
 
     config_record = open(
-        sim.CONFIG_LOG_DIR + sim.SINGLE_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time) + ".json", "w")
+        CONFIG_LOG_DIR.format(path_to_sim) + SINGLE_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time) + ".json",
+        "w")
     config_record.write(cfg_json)
     config_record.close()

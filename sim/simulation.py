@@ -8,6 +8,7 @@ import json
 import math
 import sys
 import datetime
+import pathlib
 
 from simulation_state import SimulationState
 from sim_thread import Thread
@@ -17,17 +18,18 @@ from sim_config import SimConfig
 
 SINGLE_THREAD_SIM_NAME_FORMAT = "{}_{}"
 MULTI_THREAD_SIM_NAME_FORMAT = "{}_{}_t{}"
-RESULTS_DIR = "../results/"
-META_LOG_FILE = "../results/meta_log"
-CONFIG_LOG_DIR = "../config_records/"
+RESULTS_DIR = "{}/results/"
+META_LOG_FILE = "{}/results/meta_log"
+CONFIG_LOG_DIR = "{}/config_records/"
 
 
 class Simulation:
     """Runs the simulation based on the simulation state."""
 
-    def __init__(self, configuration):
+    def __init__(self, configuration, sim_dir_path):
         self.config = configuration
         self.state = SimulationState(configuration)
+        self.sim_dir_path = sim_dir_path
 
     def run(self):
         """Run the simulation."""
@@ -429,7 +431,7 @@ class Simulation:
     def save_stats(self):
         """Save simulation date to file."""
         # Make files and directories
-        new_dir_name = RESULTS_DIR + "sim_{}/".format(self.config.name)
+        new_dir_name = RESULTS_DIR.format(self.sim_dir_path) + "sim_{}/".format(self.config.name)
         os.makedirs(os.path.dirname(new_dir_name))
         cpu_file = open("{}cpu_usage.csv".format(new_dir_name, self.config.name), "w")
         task_file = open("{}task_times.csv".format(new_dir_name, self.config.name), "w")
@@ -482,6 +484,7 @@ if __name__ == "__main__":
 
     run_name = SINGLE_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename,
                                                     datetime.datetime.now().strftime("%y-%m-%d_%H:%M:%S"))
+    path_to_sim = os.path.relpath(pathlib.Path(__file__).resolve().parents[1], start=os.curdir)
 
     if os.path.isfile(sys.argv[1]):
         cfg_json = open(sys.argv[1], "r")
@@ -489,12 +492,16 @@ if __name__ == "__main__":
         cfg.name = run_name
         cfg_json.close()
 
+
+
         if "-d" in sys.argv:
             logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
             sys.argv.remove("-d")
 
         if len(sys.argv) > 2:
-            meta_log = open(META_LOG_FILE, "a")
+            if not os.path.isdir(RESULTS_DIR.format(path_to_sim)):
+                os.makedirs(RESULTS_DIR.format(path_to_sim))
+            meta_log = open(META_LOG_FILE.format(path_to_sim), "a")
             meta_log.write("{}: {}\n".format(run_name, sys.argv[2]))
             meta_log.close()
             cfg.description = sys.argv[2]
@@ -503,11 +510,11 @@ if __name__ == "__main__":
         print("Config file not found.")
         exit(1)
 
-    sim = Simulation(cfg)
+    sim = Simulation(cfg, path_to_sim)
     sim.run()
     sim.save_stats()
 
-    config_record = open(CONFIG_LOG_DIR + run_name + ".json", "w")
+    config_record = open(CONFIG_LOG_DIR.format(path_to_sim) + run_name + ".json", "w")
     cfg_json = open(sys.argv[1], "r")
     config_record.write(cfg_json.read())
     cfg_json.close()
