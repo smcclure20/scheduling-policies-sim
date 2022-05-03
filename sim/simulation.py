@@ -514,6 +514,8 @@ if __name__ == "__main__":
     sim.run()
     sim.save_stats()
 
+    if not(os.path.isdir(CONFIG_LOG_DIR.format(path_to_sim))):
+        os.makedirs(CONFIG_LOG_DIR.format(path_to_sim))
     config_record = open(CONFIG_LOG_DIR.format(path_to_sim) + run_name + ".json", "w")
     cfg_json = open(sys.argv[1], "r")
     config_record.write(cfg_json.read())

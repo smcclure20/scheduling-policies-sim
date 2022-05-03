@@ -103,6 +103,8 @@ if __name__ == "__main__":
     for thread in threads:
         thread.start()
 
+    if not(os.path.isdir(CONFIG_LOG_DIR.format(path_to_sim))):
+        os.makedirs(CONFIG_LOG_DIR.format(path_to_sim))
     config_record = open(
         CONFIG_LOG_DIR.format(path_to_sim) + SINGLE_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time) + ".json",
         "w")
